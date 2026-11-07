@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0f0f1a">
+<title>Money Tracker Pro</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --bg: #0f0f1a;
+    --card: #1a1a2e;
+    --card-light: #232342;
+    --accent: #6c5ce7;
+    --accent2: #00d9a3;
+    --danger: #ff4757;
+    --warn: #ffa502;
+    --text: #ffffff;
+    --muted: #8b8ba7;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 20px 16px 100px;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: -120px; right: -120px;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(108,92,231,0.35), transparent 70%);
+    border-radius: 50%;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .container { position: relative; z-index: 1; max-width: 480px; margin: 0 auto; }
+
+  h1 {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin-bottom: 4px;
+    background: linear-gradient(135deg, #fff, #a29bfe);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle { color: var(--muted); font-size: 14px; margin-bottom: 22px; }
+
+  .card {
+    background: var(--card);
+    border-radius: 22px;
+    padding: 20px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(255,255,255,0.06);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.35);
+  }
+
+  .label {
+    font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px;
+    color: var(--muted); margin-bottom: 10px; font-weight: 600;
+  }
+
+  .balance {
+    font-size: 44px; font-weight: 800; letter-spacing: -1.5px;
+    margin-bottom: 6px; transition: color .3s;
+  }
+  .balance.positive { color: var(--accent2); }
+  .balance.negative { color: var(--danger); }
+  .balance small { font-size: 22px; color: var(--muted); font-weight: 600; }
+
+  .lock-status {
+    font-size: 13px; color: var(--muted);
+    display: flex; align-items: center; gap: 6px; margin-bottom: 16px;
+  }
+  .lock-status.active { color: var(--accent2); }
+  .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--muted); display: inline-block;
+  }
+  .lock-status.active .dot {
+    background: var(--accent2);
+    box-shadow: 0 0 10px var(--accent2);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  input, select, textarea {
+    width: 100%;
+    background: var(--card-light);
+    border: 1.5px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 15px;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    outline: none;
+    transition: border-color .25s;
+    font-family: inherit;
+    resize: none;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  input::placeholder, textarea::placeholder { color: #4a4a6a; font-weight: 500; }
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type=number] { -moz-appearance: textfield; }
+  select { appearance: none; background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath fill='%238b8ba7' d='M6 8L0 0h12z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 16px center; padding-right: 40px; }
+
+  .btn {
+    width: 100%; border: none; border-radius: 16px; padding: 16px;
+    font-size: 16px; font-weight: 700; font-family: inherit; cursor: pointer;
+    transition: transform .15s, opacity .2s, box-shadow .2s;
+    letter-spacing: 0.3px;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { background: linear-gradient(135deg, #6c5ce7, #a29bfe); color: #fff; box-shadow: 0 8px 20px rgba(108,92,231,0.4); }
+  .btn-lock { background: linear-gradient(135deg, #00d9a3, #00b894); color: #06281f; box-shadow: 0 8px 20px rgba(0,217,163,0.3); }
+  .btn-lock.locked { background: var(--card-light); color: var(--muted); box-shadow: none; border: 1.5px solid rgba(255,255,255,0.08); }
+  .btn-ghost { background: var(--card-light); color: var(--text); border: 1.5px solid rgba(255,255,255,0.08); }
+  .btn-danger { background: rgba(255,71,87,0.12); color: var(--danger); border: 1.5px solid rgba(255,71,87,0.3); }
+
+  .input-group { margin-bottom: 12px; }
+  .row { display: flex; gap: 10px; }
+  .row > * { flex: 1; }
+
+  .calc-result {
+    margin-top: 14px; border-radius: 16px; padding: 18px;
+    background: var(--card-light); opacity: 0; max-height: 0;
+    overflow: hidden;
+    transition: opacity .35s, max-height .35s, padding .35s;
+  }
+  .calc-result.show { opacity: 1; max-height: 400px; }
+
+  .calc-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 0; font-size: 15px;
+  }
+  .calc-row span:first-child { color: var(--muted); }
+  .calc-row span:last-child { font-weight: 700; }
+  .calc-row.total {
+    border-top: 1px dashed rgba(255,255,255,0.12);
+    margin-top: 8px; padding-top: 12px; font-size: 18px;
+  }
+  .remaining-pos { color: var(--accent2); }
+  .remaining-neg { color: var(--danger); }
+  .warn { font-size: 12px; color: var(--danger); margin-top: 10px; text-align: center; font-weight: 600; }
+
+  /* ЖУРНАЛ */
+  .section-title {
+    font-size: 15px; font-weight: 700; margin-bottom: 12px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .filters { display: flex; gap: 8px; margin-bottom: 14px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+  .filters::-webkit-scrollbar { display: none; }
+  .chip {
+    flex-shrink: 0;
+    padding: 8px 14px; border-radius: 12px; font-size: 13px; font-weight: 700;
+    background: var(--card-light); color: var(--muted);
+    border: 1.5px solid transparent; cursor: pointer; transition: all .2s;
+    white-space: nowrap;
+  }
+  .chip.active { background: rgba(108,92,231,0.2); color: #a29bfe; border-color: rgba(108,92,231,0.5); }
+
+  .entry {
+    padding: 14px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 10px;
+  }
+  .entry:last-child { border-bottom: none; }
+  .entry-left { flex: 1; min-width: 0; }
+  .entry-title { font-size: 15px; font-weight: 700; margin-bottom: 3px; word-break: break-word; }
+  .entry-meta { font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .entry-cat {
+    display: inline-block; padding: 2px 8px; border-radius: 8px;
+    background: rgba(108,92,231,0.15); color: #a29bfe; font-weight: 600; font-size: 11px;
+  }
+  .entry-comment { font-size: 13px; color: #b0b0c8; margin-top: 4px; font-style: italic; word-break: break-word; }
+  .entry-right { text-align: right; flex-shrink: 0; }
+  .entry-amount { font-size: 16px; font-weight: 800; white-space: nowrap; }
+  .entry-amount.plus { color: var(--accent2); }
+  .entry-amount.minus { color: var(--danger); }
+  .entry-del {
+    background: none; border: none; color: var(--muted); cursor: pointer;
+    font-size: 18px; padding: 4px 8px; margin-top: 4px; opacity: 0.6;
+    transition: opacity .2s, color .2s;
+  }
+  .entry-del:hover { opacity: 1; color: var(--danger); }
+
+  .empty { color: var(--muted); font-size: 14px; text-align: center; padding: 20px 0; }
+
+  .stat-bar {
+    display: flex; gap: 10px; margin-bottom: 16px;
+  }
+  .stat-box {
+    flex: 1; background: var(--card-light); padding: 14px; border-radius: 14px;
+  }
+  .stat-box .slabel { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 4px; }
+  .stat-box .sval { font-size: 18px; font-weight: 800; }
+  .stat-box .sval.plus { color: var(--accent2); }
+  .stat-box .sval.minus { color: var(--danger); }
+
+  .type-toggle {
+    display: flex; background: var(--card-light); border-radius: 16px;
+    padding: 5px; margin-bottom: 14px; gap: 5px;
+  }
+  .type-toggle button {
+    flex: 1; padding: 12px; border: none; border-radius: 12px;
+    background: transparent; color: var(--muted); font-weight: 700;
+    font-family: inherit; font-size: 14px; cursor: pointer; transition: all .2s;
+  }
+  .type-toggle button.active.income { background: rgba(0,217,163,0.2); color: var(--accent2); }
+  .type-toggle button.active.expense { background: rgba(255,71,87,0.2); color: var(--danger); }
+
+  .fade-in { animation: fadeIn .4s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  .modal-bg {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    z-index: 100; display: none; align-items: flex-end; justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+  .modal-bg.show { display: flex; }
+  .modal {
+    background: var(--card); width: 100%; max-width: 480px;
+    border-radius: 24px 24px 0 0; padding: 24px 20px 30px;
+    animation: slideUp .3s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .modal h3 { font-size: 18px; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Money Tracker Pro</h1>
+  <p class="subtitle">Грамотный учёт денег 💸</p>
+
+  <!-- БАЛАНС -->
+  <div class="card">
+    <div class="label">Текущий баланс</div>
+    <div class="balance" id="balanceDisplay">0 <small>₽</small></div>
+    <div class="lock-status" id="lockStatus">
+      <span class="dot"></span><span id="lockText">Не закреплён</span>
+    </div>
+    <div class="input-group">
+      <input type="number" id="balanceInput" placeholder="Введи сумму денег" inputmode="decimal">
+    </div>
+    <button class="btn btn-primary" id="setBalanceBtn" style="margin-bottom:10px;">Установить баланс</button>
+    <button class="btn btn-lock" id="lockBtn">🔒 Закрепить на 1 день</button>
+  </div>
+
+  <!-- СТАТИСТИКА -->
+  <div class="stat-bar">
+    <div class="stat-box">
+      <div class="slabel">Доходы</div>
+      <div class="sval plus" id="statIncome">0 ₽</div>
+    </div>
+    <div class="stat-box">
+      <div class="slabel">Расходы</div>
+      <div class="sval minus" id="statExpense">0 ₽</div>
+    </div>
+  </div>
+
+  <!-- НОВАЯ ОПЕРАЦИЯ -->
+  <div class="card">
+    <div class="label">Новая операция</div>
+
+    <div class="type-toggle">
+      <button class="active expense" data-type="expense" id="btnExpense">➖ Расход</button>
+      <button data-type="income" id="btnIncome">➕ Доход</button>
+    </div>
+
+    <div class="input-group">
+      <input type="number" id="opAmount" placeholder="Сумма" inputmode="decimal">
+    </div>
+
+    <div class="input-group">
+      <input type="text" id="opTitle" placeholder="На что / откуда (например: Продукты)" maxlength="60">
+    </div>
+
+    <div class="row input-group">
+      <select id="opCategory">
+        <option value="Еда">🍔 Еда</option>
+        <option value="Транспорт">🚗 Транспорт</option>
+        <option value="Жильё">🏠 Жильё</option>
+        <option value="Развлечения">🎮 Развлечения</option>
+        <option value="Здоровье">💊 Здоровье</option>
+        <option value="Одежда">👕 Одежда</option>
+        <option value="Зарплата">💰 Зарплата</option>
+        <option value="Подарок">🎁 Подарок</option>
+        <option value="Другое">📦 Другое</option>
+      </select>
+    </div>
+
+    <div class="input-group">
+      <textarea id="opComment" placeholder="Комментарий (необязательно)" rows="2" maxlength="200"></textarea>
+    </div>
+
+    <button class="btn btn-primary" id="addOpBtn">Добавить операцию</button>
+
+    <div class="calc-result" id="calcResult">
+      <div class="calc-row">
+        <span>Было</span>
+        <span id="rBalance">0 ₽</span>
+      </div>
+      <div class="calc-row">
+        <span>Операция</span>
+        <span id="rPurchase">0 ₽</span>
+      </div>
+      <div class="calc-row total">
+        <span>Станет</span>
+        <span id="rRemaining">0 ₽</span>
+      </div>
+      <div class="warn" id="rWarn" style="display:none;">⚠️ Баланс уйдёт в минус!</div>
+    </div>
+  </div>
+
+  <!-- ЖУРНАЛ -->
+  <div class="card">
+    <div class="section-title">
+      <span>📖 Журнал операций</span>
+      <button class="btn btn-danger" id="clearHistoryBtn" style="width:auto;padding:8px 14px;font-size:12px;border-radius:12px;">Очистить</button>
+    </div>
+
+    <div class="filters" id="filters">
+      <div class="chip active" data-filter="all">Все</div>
+      <div class="chip" data-filter="income">Доходы</div>
+      <div class="chip" data-filter="expense">Расходы</div>
+    </div>
+
+    <div id="historyList"><div class="empty">Пока пусто — добавь первую операцию</div></div>
+  </div>
+</div>
+
+<script>
+  const LS = {
+    balance: 'mt2_balance',
+    lock: 'mt2_lock',
+    history: 'mt2_history'
+  };
+
+  let balance = parseFloat(localStorage.getItem(LS.balance)) || 0;
+  let lockData = JSON.parse(localStorage.getItem(LS.lock) || 'null');
+  let history = JSON.parse(localStorage.getItem(LS.history) || '[]');
+  let opType = 'expense';
+  let currentFilter = 'all';
+
+  const $ = id => document.getElementById(id);
+
+  function formatMoney(n) {
+    return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format(n) + ' ₽';
+  }
+
+  // ===== БАЛАНС =====
+  function renderBalance() {
+    const el = $('balanceDisplay');
+    el.innerHTML = formatMoney(balance).replace(' ₽', ' <small>₽</small>');
+    el.classList.toggle('positive', balance > 0);
+    el.classList.toggle('negative', balance < 0);
+  }
+
+  $('setBalanceBtn').addEventListener('click', () => {
+    const val = parseFloat($('balanceInput').value);
+    if (isNaN(val)) return;
+    balance = val;
+    localStorage.setItem(LS.balance, balance);
+    $('balanceInput').value = '';
+    renderBalance();
+    renderLock();
+  });
+
+  // ===== ЗАКРЕПЛЕНИЕ =====
+  function isLocked() {
+    return lockData && Date.now() < lockData.until;
+  }
+
+  function renderLock() {
+    const statusEl = $('lockStatus');
+    const textEl = $('lockText');
+    const btn = $('lockBtn');
+
+    if (isLocked()) {
+      const left = Math.ceil((lockData.until - Date.now()) / 3600000);
+      statusEl.classList.add('active');
+      textEl.textContent = `Закреплено на ${left} ч · ${formatMoney(lockData.amount)}`;
+      btn.textContent = '🔓 Отменить закрепление';
+      btn.classList.add('locked');
+    } else {
+      statusEl.classList.remove('active');
+      textEl.textContent = 'Не закреплён';
+      btn.textContent = '🔒 Закрепить на 1 день';
+      btn.classList.remove('locked');
+    }
+  }
+
+  $('lockBtn').addEventListener('click', () => {
+    if (isLocked()) {
+      lockData = null;
+      localStorage.removeItem(LS.lock);
+    } else {
+      lockData = { amount: balance, until: Date.now() + 24 * 3600 * 1000 };
+      localStorage.setItem(LS.lock, JSON.stringify(lockData));
+    }
+    renderLock();
+  });
+
+  // ===== ТИП ОПЕРАЦИИ =====
+  $('btnExpense').addEventListener('click', () => setType('expense'));
+  $('btnIncome').addEventListener('click', () => setType('income'));
+
+  function setType(t) {
+    opType = t;
+    $('btnExpense').classList.toggle('active', t === 'expense');
+    $('btnExpense').classList.toggle('expense', t === 'expense');
+    $('btnIncome').classList.toggle('active', t === 'income');
+    $('btnIncome').classList.toggle('income', t === 'income');
+    $('calcResult').classList.remove('show');
+  }
+
+  // ===== ДОБАВЛЕНИЕ ОПЕРАЦИИ =====
+  $('addOpBtn').addEventListener('click', () => {
+    const amount = parseFloat($('opAmount').value);
+    const title = $('opTitle').value.trim() || ($('opCategory').value);
+    const category = $('opCategory').value;
+    const comment = $('opComment').value.trim();
+
+    if (isNaN(amount) || amount <= 0) {
+      $('opAmount').focus();
+      return;
+    }
+
+    const newBalance = opType === 'expense' ? balance - amount : balance + amount;
+
+    // предпросмотр
+    $('rBalance').textContent = formatMoney(balance);
+    $('rPurchase').textContent = (opType === 'expense' ? '-' : '+') + formatMoney(amount);
+    $('rRemaining').textContent = formatMoney(newBalance);
+    $('rRemaining').className = newBalance >= 0 ? 'remaining-pos' : 'remaining-neg';
+    $('rWarn').style.display = newBalance < 0 ? 'block' : 'none';
+    $('calcResult').classList.add('show');
+
+    // сохраняем
+    history.unshift({
+      id: Date.now() + Math.random(),
+      type: opType,
+      amount,
+      title,
+      category,
+      comment,
+      date: Date.now()
+    });
+    history = history.slice(0, 100);
+    balance = newBalance;
+
+    localStorage.setItem(LS.history, JSON.stringify(history));
+    localStorage.setItem(LS.balance, balance);
+
+    renderBalance();
+    renderHistory();
+    renderStats();
+
+    // очистка полей
+    $('opAmount').value = '';
+    $('opTitle').value = '';
+    $('opComment').value = '';
+
+    setTimeout(() => $('calcResult').classList.remove('show'), 4000);
+  });
+
+  // ===== ЖУРНАЛ =====
+  function renderHistory() {
+    const list = $('historyList');
+    const filtered = history.filter(h => currentFilter === 'all' || h.type === currentFilter);
+
+    if (!filtered.length) {
+      list.innerHTML = '<div class="empty">Пока пусто — добавь первую операцию</div>';
+      return;
+    }
+
+    list.innerHTML = filtered.map(h => {
+      const d = new Date(h.date);
+      const dateStr = d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' }) + ' · ' +
+                      d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+      const sign = h.type === 'expense' ? '-' : '+';
+      const cls = h.type === 'expense' ? 'minus' : 'plus';
+      return `<div class="entry fade-in">
+        <div class="entry-left">
+          <div class="entry-title">${escapeHtml(h.title)}</div>
+          <div class="entry-meta">
+            <span class="entry-cat">${escapeHtml(h.category)}</span>
+            <span>${dateStr}</span>
+          </div>
+          ${h.comment ? `<div class="entry-comment">💬 ${escapeHtml(h.comment)}</div>` : ''}
+        </div>
+        <div class="entry-right">
+          <div class="entry-amount ${cls}">${sign}${formatMoney(h.amount)}</div>
+          <button class="entry-del" data-id="${h.id}" title="Удалить">✕</button>
+        </div>
+      </div>`;
+    }).join('');
+
+    // удаление
+    list.querySelectorAll('.entry-del').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = parseFloat(btn.dataset.id);
+        const item = history.find(h => h.id === id);
+        if (!item) return;
+        if (!confirm('Удалить эту операцию? Баланс будет пересчитан.')) return;
+
+        balance = item.type === 'expense' ? balance + item.amount : balance - item.amount;
+        history = history.filter(h => h.id !== id);
+        localStorage.setItem(LS.history, JSON.stringify(history));
+        localStorage.setItem(LS.balance, balance);
+
+        renderBalance();
+        renderHistory();
+        renderStats();
+      });
+    });
+  }
+
+  function escapeHtml(s) {
+    const div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
+  }
+
+  // ===== ФИЛЬТРЫ =====
+  document.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      currentFilter = chip.dataset.filter;
+      renderHistory();
+    });
+  });
+
+  // ===== СТАТИСТИКА =====
+  function renderStats() {
+    const income = history.filter(h => h.type === 'income').reduce((s, h) => s + h.amount, 0);
+    const expense = history.filter(h => h.type === 'expense').reduce((s, h) => s + h.amount, 0);
+    $('statIncome').textContent = formatMoney(income);
+    $('statExpense').textContent = formatMoney(expense);
+  }
+
+  // ===== ОЧИСТКА =====
+  $('clearHistoryBtn').addEventListener('click', () => {
+    if (!confirm('Очистить ВСЮ историю операций? Баланс останется.')) return;
+    history = [];
+    localStorage.setItem(LS.history, JSON.stringify(history));
+    renderHistory();
+    renderStats();
+  });
+
+  // ===== ИНИЦИАЛИЗАЦИЯ =====
+  renderBalance();
+  renderLock();
+  renderHistory();
+  renderStats();
+  setInterval(renderLock, 60000);
+</script>
+</body>
+</html>
